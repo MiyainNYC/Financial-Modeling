@@ -1,21 +1,33 @@
 ## Welcome,
 
-**This repo is about financial analysis: knowledge and skills of Black-scholes model and its extended version, multithreading simulation, time series..., implemented with Python**
+**This repo is about financial modeling and application:**
+
+* option pricing models such as Black Scholas and its extended version
+
+*  monte carlo simulation for stock price
+
+* time series analysis
+
+* visualization...
+
+**Packages used:**
+
+pandas, numpy, scipy, matplotlib, seaborn...
 
 
 
-Main language of Modeling
+**Main language of Modeling**
 
-**Linear :**
+* Linear :
 A one-unit change of x corresponds to an m-unit change in y
 
-**Log :** 
+* Log : 
 diminshing returns to scale: a constant proportionate change in x is associated with the same absolute change in y
 
-**Power:** 
+* Power: 
 A one percent of change in x correpsonds to m percent change in y
 
-**Exponential:**
+* Exponential:
 A one-unit of change in x corresponse to 100m% change in y
 
 
