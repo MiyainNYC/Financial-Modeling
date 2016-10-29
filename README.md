@@ -8,7 +8,11 @@
 
 * time series analysis
 
-* visualization...
+* visualization
+
+* Multithreading
+
+* Web Crawling
 
 **Packages used:**
 
