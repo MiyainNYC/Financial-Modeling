@@ -8,28 +8,91 @@ import numpy as np
 import matplotlib.pyplot as plot
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
+import random
 
 
 class OptionDataWebGleaner(object):
+    @property
     def __init__(self):
 
-        ticker = pd.read_csv('Yahoo_ticker_List.csv')['AUB.AX'].values
-        self.ticker = ticker
-        dates = ['1481846400', '1484870400', '1487289600']
-        maturity_dates = [date(2016, 12, 16), date(2017, 1, 20), date(2017, 2, 17)]
+        ticker = [line.strip() for line in open('Yahoo_ticker_List.csv')]
+        self.today = date.today()
+
+        num = int(raw_input("How many stocks you want to download?\n"))
+
+        list_chosen = random.sample(range(0, len(ticker)), num)
+
+        stocks = [ticker[i] for i in list_chosen]
+
+        if raw_input('Do you have a stock you want to look particularly? Type Y or yes, N or no\n') == 'Y':
+            stocks.append(raw_input('Type the ticker of your stock\n'))
+
+        df_dict = self.data_download(stocks)
+
+        if raw_input('Do you want to save the date? Type Y or yes, N or no\n') == 'Y':
+            for stock in df_dict.keys():
+                df_dict[stock].to_csv(stock+'.csv')
+
+        if raw_input('Do you want to process and clean the data? Type Y or yes, N or no\n') == 'Y':
+            for stock in df_dict.keys():
+                df = df_dict[stock]
+                df_dict[stock] = self.clean_data(df)
+
+        if raw_input("Do you want to remove outliers? Type Y for yes, N or no\n") == 'Y':
+            for stock in df_dict.keys():
+                print(df_dict[stock].loc[df_dict[stock]['Implied Volatility'] > 2])
+                print('Removing outliers...')
+                df_dict[stock] = df_dict[stock].loc[df_dict[stock]['Implied Volatility'] <= 2]
+
+        if raw_input("Do you want to visualize? Type Y for yes, N or no\n") == 'Y':
+            for stock in df_dict.keys():
+                print stock
+                self.viz(df_dict[stock])
+
+        if raw_input("Do you want to get summery of your stock? Type Y for yes, N or no\n") == 'Y':
+            for stock in df_dict.keys():
+                self.summary(df_dict[stock])
+
+    def clean_data(self, dataframe):
+        columns_to_set = ['Last Price', 'Open Interest', 'Strike', 'Volume', 'Implied Volatility']
+
+        for i in columns_to_set:
+            series = dataframe[i]
+            series_new = []
+            for j in series:
+                j = str(j)
+                j_new = ''.join(ch for ch in j if (ch != '%') and (ch != ','))
+                series_new.append(j_new)
+            dataframe[i] = series_new
+
+        print('Unexpected symbols removed...')
+
+        columns_to_change = ['Last Price', 'Open Interest', 'Strike', 'Volume', 'stock_price', 'Implied Volatility']
+        for i in columns_to_change:
+            dataframe[i] = dataframe[i].astype(float)
+
+        print('Data type changed...')
+
+        ## change the dtype
+
+        dataframe = dataframe.dropna()
+
+        print("Missing values removed...")
+
+        return dataframe
+
+    def data_download(self, stocks):
 
         chromedriver = "/Users/Miya/Downloads/chromedriver.exe"
         os.environ["webdriver.chrome.driver"] = chromedriver
         driver = webdriver.Chrome(chromedriver)
-        option = raw_input('Please type the ticker of your option:\n')
+        maturity_dates = [date(2016, 12, 16), date(2017, 1, 20), date(2017, 2, 17)]
+        dates = ['1481846400', '1484870400', '1487289600']
+
         df_dict = {}
-        self.today = date.today()
 
-        self.option = option
-
-        for stock in self.ticker:
+        for stock in stocks:
             for d, maturity in zip(dates, maturity_dates):
-
                 url = 'http://finance.yahoo.com/quote/' + stock + '/options?date=' + d
                 ## Crawl data
                 driver.get(url)
@@ -39,10 +102,14 @@ class OptionDataWebGleaner(object):
 
                 if soup.find('table', 'calls') is not None:
 
+                    print('Web Crawling~')
+
                     stock_price = [float(i.text) for i in soup.findAll('span', 'Fz(36px)')]
                     title = [i.text for i in soup.find('table', 'calls').find_all('th')]
                     text = [i.text for i in soup.find('table', 'calls').find_all('td')]
                     rows = [row for row in soup.find('table', 'calls').find_all("tr")]
+
+                    print('Crawling Finished!')
 
                     l_table = len(rows) - 1
                     ## call data
@@ -60,78 +127,20 @@ class OptionDataWebGleaner(object):
 
                             ## write into dataframe
                     df = pd.DataFrame(dictionary)
+                    print('Saved into dataframe!')
 
                     # df.to_csv(stock+date+'.csv')
+                    stock_refined = ''.join(ch for ch in stock if (ch != '.') and (ch != '-'))
 
-                    if stock not in df_dict.keys():
-                        df_dict[stock] = df
+                    if stock_refined not in df_dict.keys():
+                        df_dict[stock_refined] = df
                     else:
-                        df_dict[stock] = pd.concat([df_dict[stock], df], ignore_index=True)
-
-        self.dictionary = df_dict
-
-    def clean_data(self):
-
-        df_dict = self.dictionary
-        for stock in self.ticker:
-
-            columns_to_set = ['Last Price', 'Open Interest', 'Strike', 'Volume', 'Implied Volatility']
-            dataframe = df_dict[stock]
-
-            for i in columns_to_set:
-                series = dataframe[i]
-                series_new = []
-                for j in series:
-                    j = str(j)
-                    j_new = ''.join(ch for ch in j if (ch != '%') and (ch != ','))
-                    series_new.append(j_new)
-                dataframe[i] = series_new
-
-            df_dict[stock] = dataframe
-
-        print('Unexpected symbols removed...')
-
-        for stock in self.ticker:
-            columns_to_change = ['Last Price', 'Open Interest', 'Strike', 'Volume', 'stock_price', 'Implied Volatility']
-            dataframe = df_dict[stock]
-            for i in columns_to_change:
-                dataframe[i] = dataframe[i].astype(float)
-
-            df_dict[stock] = dataframe
-
-        print('Data type changed...')
-
-        ## change the dtype
-
-        #for stock in self.ticker:
-         #   df_dict[stock] = df_dict[stock].dropna()
-
-        #print("Missing values removed...")
-
-        #for stock in self.ticker:
-            #df_dict[stock] = df_dict[stock].loc[df_dict[stock]['Implied Volatility'] <= 2]
-
-        print("Outliers removed...")
+                        df_dict[stock_refined] = pd.concat([df_dict[stock_refined], df], ignore_index=True)
 
         return df_dict
 
-    def save_file(self):
-
-        save_file = raw_input("Do you want to save the file into csv? Type Y for yes, N or no\n ")
-        df_dict = self.clean_data()
-        if save_file == 'Y':
-            for stock in self.ticker:
-
-                csv_name = stock  + '.csv'
-                df_dict[stock].to_csv(csv_name)
-            print("File Saved!")
-
-    def viz(self):
-
-        df_dict = self.clean_data()
-        option = self.option
+    def viz(self, dataframe):
         time_to_maturity = []
-        dataframe = df_dict[option]
         dataframe = dataframe.sort_values(by='Strike')
         ## grab dataframe, then relevant data
         for i, j in zip(dataframe.maturity_date, dataframe.date):
@@ -160,16 +169,11 @@ class OptionDataWebGleaner(object):
         ax.set_xlabel('Strike Price')
         ax.set_ylabel('time to maturity')
         ax.set_zlabel('implied volatility%')
-        plot.suptitle(option)
         plot.show()
 
-    def summary(self):
+    def summary(self, dataframe):
 
-        df_dict = self.clean_data()
-        option = self.option
-        dataframe = df_dict[option]
         print(dataframe.describe())
 
 
-OptionDataWebGleaner().viz()
-
+OptionDataWebGleaner()
