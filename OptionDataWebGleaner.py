@@ -1,3 +1,10 @@
+###############################
+###############################
+
+Developed by Miya WANG  10/2016
+
+#################################
+
 from selenium import webdriver
 from bs4 import BeautifulSoup
 import os
