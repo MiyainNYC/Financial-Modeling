@@ -14,6 +14,11 @@
 
 * Web Crawling
 
+
+* Root finding method such as Newton
+
+* Machine Learning
+
 **Packages used:**
 
 pandas, numpy, scipy, matplotlib, seaborn...
